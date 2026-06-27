@@ -38,18 +38,16 @@ st.set_page_config(
 )
 
 # =============================================================================
-# INSIALISASI MANAJEMEN SESI (DIUBAH MENJADI KOSONG)
+# INSIALISASI MANAJEMEN SESI (BUG AMNESIA TELAH DIPERBAIKI DI SINI)
 # =============================================================================
 if "initialized" not in st.session_state:
-    st.initialized = True
-    st.session_state.current_theme = "dark"
+    st.session_state.initialized = True # <--- Typonya sudah diperbaiki di sini
+    st.session_state.current_theme = "light"
     st.session_state.current_role = "dc"
-    st.session_state.user_name = "Anjas"
-    st.session_state.user_suffix = "sayang"
+    st.session_state.user_name = "An_"
+    st.session_state.user_suffix = ""
     
-    # Dikosongkan total agar tidak perlu menghapus manual di halaman web
     st.session_state.metadata = {key: "" for key in DEFAULT_METADATA.keys()}
-    
     st.session_state.fat_commands = [""]
     st.session_state.pole_commands = [""]
 
@@ -193,7 +191,7 @@ else:
         st.success("✅ Seluruh perintah struktur Fase 1 berhasil divalidasi.")
 
     # =============================================================================
-    # AREA GENERATOR EXCEL (FIXED CLOSED FILE IO ERROR)
+    # AREA GENERATOR EXCEL (SOLUSI CLOSED FILE)
     # =============================================================================
     if st.session_state.get("is_validated", False):
         st.divider()
@@ -205,15 +203,14 @@ else:
             if "processed_cluster" not in st.session_state or st.session_state.get("last_template") != uploaded_template.name:
                 try:
                     with st.spinner("Merakit struktur dokumen secara aman..."):
-                        # SOLUSI: Ekstrak stream berkas menjadi data biner mentah murni sekali saja
-                        raw_template_bytes = uploaded_template.read()
+                        # SOLUSI ABSOLUT: Mengubah file uploader menjadi raw bytes murni (.getvalue())
+                        raw_template_bytes = uploaded_template.getvalue()
                         
-                        # Gabungkan input form dengan kamus default jika kosong (Option Fallback)
                         actual_metadata = {}
                         for key, val in st.session_state.metadata.items():
                             actual_metadata[key] = val.strip() if val.strip() else DEFAULT_METADATA[key]
                         
-                        # Kirim memori bytes yang segar ke rute kloning Cluster
+                        # Cluster Injector dipanggil dengan BytesIO baru
                         excel_cluster = inject_excel_fase1(
                             io.BytesIO(raw_template_bytes), 
                             actual_metadata, 
@@ -223,7 +220,7 @@ else:
                         )
                         st.session_state.processed_cluster = excel_cluster.getvalue()
                         
-                        # Kirim memori bytes yang segar ke rute kloning Subfeeder
+                        # Subfeeder Injector dipanggil dengan BytesIO baru lainnya
                         excel_subfeeder = inject_excel_fase1(
                             io.BytesIO(raw_template_bytes), 
                             actual_metadata, 
@@ -240,7 +237,6 @@ else:
                     st.error(f"Terjadi kegagalan pemrosesan struktur file: {str(e)}")
             
             if "processed_cluster" in st.session_state and "processed_subfeeder" in st.session_state:
-                # Menggunakan fallback penamaan file jika input kosong
                 nama_lokasi = st.session_state.metadata.get('NAMA_LOKASI', '').strip() or DEFAULT_METADATA["NAMA_LOKASI"]
                     
                 col_dl1, col_dl2 = st.columns(2)
