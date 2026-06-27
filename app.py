@@ -18,10 +18,10 @@ st.set_page_config(
 # =============================================================================
 if "initialized" not in st.session_state:
     st.session_state.initialized = True
-    st.session_state.current_theme = "dark"
+    st.session_state.current_theme = "light"
     st.session_state.current_role = "dc"  # Default role: Document Control
-    st.session_state.user_name = "Anjas"
-    st.session_state.user_suffix = "sayang"  # Suffix spesial kustom
+    st.session_state.user_name = "An_"
+    st.session_state.user_suffix = ""  # Suffix spesial kustom
     
     # Inisialisasi 16 Variabel Penting Support Table (Fase 1)
     st.session_state.metadata = {
@@ -200,8 +200,7 @@ else:
         col1, col2 = st.columns(2)
         with col1:
             st.session_state.metadata["NAMA_PROYEK"] = st.text_input(
-                "Nama Proyek", value="EMR FTTH PROJECT", 
-                placeholder="Contoh: EMR FTTH PROJECT", 
+                "Nama Proyek", placeholder="Contoh: EMR FTTH PROJECT", 
                 help="Masukkan nama proyek utama sesuai kontrak kerja spek pelanggan."
             )
             st.session_state.metadata["NO_PO"] = st.text_input(
@@ -214,13 +213,11 @@ else:
             )
         with col2:
             st.session_state.metadata["REGION"] = st.text_input(
-                "Region Wilayah", value="JAWA TIMUR", 
-                placeholder="Contoh: JAWA TIMUR",
+                "Region Wilayah", placeholder="Contoh: JAWA TIMUR",
                 help="Lokasi provinsi atau cakupan area kerja proyek."
             )
             st.session_state.metadata["ALAMAT"] = st.text_input(
-                "Alamat Lengkap Site", value="Pare, East Java", 
-                placeholder="Contoh: Nglawak Kecamatan Kertosono, Kediri",
+                "Alamat Lengkap Site", placeholder="Contoh: Nglawak Kecamatan Kertosono, Kediri",
                 help="Alamat geografi spesifik tempat infrastruktur dipasang."
             )
             
@@ -259,8 +256,7 @@ else:
         col5, col6 = st.columns(2)
         with col5:
             st.session_state.metadata["NAMA_PT_VENDOR"] = st.text_input(
-                "Nama Perusahaan Vendor", value="PT Buana Menara Indonesia", 
-                placeholder="Contoh: PT Buana Menara Indonesia",
+                "Nama Perusahaan Vendor", placeholder="Contoh: PT Buana Menara Indonesia",
                 help="Nama resmi perusahaan pelaksana pembangunan infrastruktur."
             )
             st.session_state.metadata["REP_VENDOR"] = st.text_input(
@@ -268,24 +264,20 @@ else:
                 help="Nama lengkap penanggung jawab dari vendor untuk tanda tangan dokumen."
             )
             st.session_state.metadata["JABATAN_VENDOR"] = st.text_input(
-                "Jabatan Pelaksana Vendor", value="BMI FIELD SUPERVISOR", 
-                placeholder="Contoh: BMI FIELD SUPERVISOR",
+                "Jabatan Pelaksana Vendor", placeholder="Contoh: BMI FIELD SUPERVISOR",
                 help="Posisi struktural dari penanggung jawab pihak mitra/vendor."
             )
         with col6:
             st.session_state.metadata["NAMA_PT_CUSTOMER"] = st.text_input(
-                "Nama Perusahaan Customer", value="PT Ekamas Mora Republik Tbk", 
-                placeholder="Contoh: PT Ekamas Mora Republik Tbk",
+                "Nama Perusahaan Customer", placeholder="Contoh: PT Ekamas Mora Republik Tbk",
                 help="Nama perusahaan pemilik jaringan/pemilik proyek utama."
             )
             st.session_state.metadata["REP_CUSTOMER"] = st.text_input(
-                "Nama Representatif Customer", value="Suparmanto", 
-                placeholder="Contoh: SUPARMANTO",
+                "Nama Representatif Customer", placeholder="Contoh: SUPARMANTO",
                 help="Nama pengawas atau direksi resmi dari pihak customer."
             )
             st.session_state.metadata["JABATAN_CUSTOMER"] = st.text_input(
-                "Jabatan Pengawas Customer", value="EMR FIELD SUPERVISOR", 
-                placeholder="Contoh: EMR FIELD SUPERVISOR",
+                "Jabatan Pengawas Customer", placeholder="Contoh: EMR FIELD SUPERVISOR",
                 help="Posisi struktural dari penanggung jawab pihak customer."
             )
             
@@ -320,10 +312,10 @@ else:
     st.write("") 
     st.divider()
 
-    # --- JALUR TIANG ---
+        # --- JALUR TIANG ---
     st.subheader("B. Pembangun Tiang (Pole Erection)")
-    st.markdown("> 💡 **Panduan & Contoh:** Gunakan awalan kata kunci yang ketat. \n> * `Pole 74 = 10` $\rightarrow$ Memicu lembar **Pole Erection 74** (10 baris data NEW POLE).\n> * `Ext 74 = 12` $\rightarrow$ Memicu lembar **Pole Erection Ext 74** (12 baris data EXT POLE).")
-    
+    st.markdown("> 💡 **Panduan & Contoh:** Gunakan awalan kata kunci yang ketat. \n> * `Pole 74 = 10` ➔ Memicu lembar **Pole Erection 74** (10 baris data NEW POLE).\n> * `Ext 74 = 12` ➔ Memicu lembar **Pole Erection Ext 74** (12 baris data EXT POLE).")
+
     for i in range(len(st.session_state.pole_commands)):
         st.session_state.pole_commands[i] = st.text_input(
             f"Perintah Volume Tiang ke-{i+1}", 
