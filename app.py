@@ -3,6 +3,9 @@ import datetime
 import random
 import os
 
+# Panggil mesin penerjemah yang baru saja kita buat
+from parser_engine import parse_all_fat, parse_all_poles
+
 # =============================================================================
 # 1. KONFIGURASI HALAMAN UTAMA (UNIVERSAL)
 # =============================================================================
@@ -330,17 +333,38 @@ else:
 
     st.divider()
 
-    # --- PENGUNCI DATA AKHIR ---
+        # --- PENGUNCI DATA AKHIR ---
     if st.button("💾 Simpan & Validasi Draf Fase 1"):
+        # Bersihkan input kosong
         fat_bersih = [cmd for cmd in st.session_state.fat_commands if cmd.strip() != ""]
         pole_bersih = [cmd for cmd in st.session_state.pole_commands if cmd.strip() != ""]
         
         st.session_state.fat_commands = fat_bersih if fat_bersih else [""]
         st.session_state.pole_commands = pole_bersih if pole_bersih else [""]
         
-        st.success("✅ Seluruh perintah struktur Fase 1 berhasil divalidasi dan dikunci dalam sistem.")
-        st.write("**Daftar Jalur FAT Terdaftar:**", fat_bersih)
-        st.write("**Daftar Distribusi Tiang Terdaftar:**", pole_bersih)
+        # Eksekusi Mesin Penerjemah (Parser Engine)
+        parsed_fat = parse_all_fat(fat_bersih)
+        parsed_poles = parse_all_poles(pole_bersih)
+        
+        # Simpan hasil terjemahan ke memori untuk disuntikkan ke Excel nanti
+        st.session_state.parsed_fat = parsed_fat
+        st.session_state.parsed_poles = parsed_poles
+        
+        st.success("✅ Seluruh perintah struktur Fase 1 berhasil divalidasi dan diterjemahkan oleh sistem.")
+        
+        # Tampilkan visualisasi hasil terjemahan mesin ke layar DC
+        col_res1, col_res2 = st.columns(2)
+        with col_res1:
+            st.write(f"**Hasil Terjemahan Jalur FAT (Total: {len(parsed_fat)} titik):**")
+            st.info(", ".join(parsed_fat) if parsed_fat else "Tidak ada data FAT")
+            
+        with col_res2:
+            st.write("**Hasil Terjemahan Distribusi Tiang:**")
+            if parsed_poles:
+                for pole in parsed_poles:
+                    st.success(f"Tipe: **{pole['type']}** | Ukuran: **{pole['size']}** | Jumlah: **{pole['qty']}** batang")
+            else:
+                st.info("Tidak ada data Tiang")
 
 # =============================================================================
 # 7. SUNTIKAN KOMPONEN FOOTER STATIS (HIGH VISIBILITY FOR PC & MOBILE)
