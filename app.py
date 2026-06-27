@@ -55,7 +55,6 @@ def load_greetings(filepath="greetings.txt"):
     greetings = {"MINGGU": [], "PAGI": [], "SIANG": [], "SORE": [], "MALAM": []}
     current_section = None
     
-    # Jika file tidak ditemukan, kembalikan wadah kosong
     if not os.path.exists(filepath):
         return greetings
         
@@ -64,7 +63,6 @@ def load_greetings(filepath="greetings.txt"):
             line = line.strip()
             if not line:
                 continue
-            # Deteksi kategori jam/hari
             if line.startswith("[") and line.endswith("]"):
                 current_section = line[1:-1].upper()
             elif current_section in greetings:
@@ -81,15 +79,12 @@ def generate_dc_greeting(nama, suffix):
         "Monday": "Senin", "Tuesday": "Selasa", "Wednesday": "Rabu",
         "Thursday": "Kamis", "Friday": "Jumat", "Saturday": "Sabtu", "Sunday": "Minggu"
     }
+    hari_lokal = kamus_hari.get(hari_inggris, grid_day:=hari_inggris)
     hari_lokal = kamus_hari.get(hari_inggris, hari_inggris)
     
-    # Merakit nama lengkap + suffix
     panggilan_lengkap = f"{nama} {suffix}".strip() if suffix else nama
-    
-    # Panggil database dari TXT
     greetings_db = load_greetings()
     
-    # Logika Penentuan Sapaan (Prioritas: Hari Minggu -> Jam Kerja)
     if hari_lokal == "Minggu" and greetings_db["MINGGU"]:
         terpilih = random.choice(greetings_db["MINGGU"])
     elif 0 <= hour < 11 and greetings_db["PAGI"]:
@@ -101,24 +96,35 @@ def generate_dc_greeting(nama, suffix):
     elif greetings_db["MALAM"]:
         terpilih = random.choice(greetings_db["MALAM"])
     else:
-        # Teks Cadangan Darurat Jika File Txt Rusak / Kosong
         terpilih = "Halo {nama_lengkap}! Selamat bekerja di Universal ATP Generator. Pastikan data terekam dengan baik."
         
-    # Menyuntikkan variabel {nama_lengkap} ke dalam string yang ditarik dari database
     return terpilih.format(nama_lengkap=panggilan_lengkap)
 
 # =============================================================================
-# 4. IMPLEMENTASI INTEGRASI TEMA (DARK / LIGHT MODE CSS INJECTION)
+# 4. IMPLEMENTASI INTEGRASI TEMA & PERBAIKAN KONTRAS FONT (CSS INJECTION)
 # =============================================================================
 def apply_theme_style():
-    """Menginjeksi CSS untuk mengubah tema antarmuka secara presisi"""
+    """Menginjeksi CSS kuat untuk menjamin keterbacaan teks di semua mode perangkat"""
     if st.session_state.current_theme == "dark":
         st.markdown("""
             <style>
             .stApp { background-color: #0E1117; color: #FFFFFF; }
             .stButton>button { background-color: #1F2937; color: #10B981; border: 1px solid #10B981; }
             .stButton>button:hover { background-color: #10B981; color: #FFFFFF; }
-            div[data-testid="stForm"] { background-color: #1E293B; border: 1px solid #334155; border-radius: 10px; }
+            
+            /* Perbaikan Kontras Komponen Form Mode Gelap */
+            div[data-testid="stForm"] { background-color: #1E293B; border: 1px solid #334155; border-radius: 10px; padding: 25px; }
+            div[data-testid="stForm"] label p { color: #F3F4F6 !important; font-weight: 600 !important; font-size: 14px !important; }
+            div[data-testid="stForm"] input { color: #FFFFFF !important; background-color: #0F172A !important; border: 1px solid #475569 !important; }
+            div[data-testid="stForm"] .stMarkdown p { color: #CBD5E1 !important; }
+            
+            /* Footer Khusus Mode Gelap PC & Mobile */
+            .permanent-footer {
+                position: fixed; left: 0; bottom: 0; width: 100%;
+                background-color: #0F172A; color: #10B981;
+                text-align: center; padding: 12px 0; font-size: 14px;
+                font-weight: 700; border-top: 2px solid #10B981; z-index: 999;
+            }
             </style>
         """, unsafe_allow_html=True)
     else:
@@ -127,14 +133,27 @@ def apply_theme_style():
             .stApp { background-color: #F9FAFB; color: #1F2937; }
             .stButton>button { background-color: #FFFFFF; color: #059669; border: 1px solid #059669; }
             .stButton>button:hover { background-color: #059669; color: #FFFFFF; }
-            div[data-testid="stForm"] { background-color: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 10px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+            
+            /* Desain Komponen Form Mode Terang */
+            div[data-testid="stForm"] { background-color: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 10px; padding: 25px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+            div[data-testid="stForm"] label p { color: #1F2937 !important; font-weight: 600 !important; font-size: 14px !important; }
+            div[data-testid="stForm"] input { color: #1F2937 !important; background-color: #FFFFFF !important; border: 1px solid #D1D5DB !important; }
+            
+            /* Footer Khusus Mode Terang PC & Mobile */
+            .permanent-footer {
+                position: fixed; left: 0; bottom: 0; width: 100%;
+                background-color: #FFFFFF; color: #059669;
+                text-align: center; padding: 12px 0; font-size: 14px;
+                font-weight: 700; border-top: 2px solid #059669;
+                box-shadow: 0 -2px 10px rgba(0,0,0,0.05); z-index: 999;
+            }
             </style>
         """, unsafe_allow_html=True)
 
 apply_theme_style()
 
 # =============================================================================
-# 5. STRUKTUR NAVIGASI UTAMA & FOOTER PERMANEN (STRICT)
+# 5. STRUKTUR NAVIGASI UTAMA (SIDEBAR CONTROLS)
 # =============================================================================
 with st.sidebar:
     st.subheader("👤 Kendali Akses & Profil")
@@ -143,26 +162,23 @@ with st.sidebar:
     
     st.divider()
     
-    # Pengatur Akun & Role (Admin vs DC)
     st.subheader("⚙️ Ruang Lingkup Kerja")
     role_choice = st.radio("Pilih Hak Akses Halaman:", ["Document Control (DC)", "Administrator System"])
     st.session_state.current_role = "dc" if "DC" in role_choice else "admin"
     
     st.divider()
     
-    # Sakelar Toggle Dark / Light Mode
-    st.subheader("🎨 Estetika Visual")
-    theme_toggle = st.toggle("Aktifkan Light Mode", value=(st.session_state.current_theme == "light"))
+    st.subheader("🎨 Visual Tema")
+    theme_toggle = st.toggle("Aktifkan Mode Terang", value=(st.session_state.current_theme == "light"))
     st.session_state.current_theme = "light" if theme_toggle else "dark"
     
     st.divider()
     
-    # Simulasi Logout Akun
     if st.sidebar.button("🔒 Logout Akun"):
         st.toast("Sesi Anda telah diakhiri secara aman.")
 
 # =============================================================================
-# 6. PEMBAGIAN BLOK RUANG KERJA (BERDASARKAN ROLE)
+# 6. PEMBAGIAN BLOK RUANG KERJA & FORM DENGAN PETUNJUK LENGKAP
 # =============================================================================
 st.title("⚡ Universal ATP Document Generator")
 
@@ -175,70 +191,166 @@ else:
     st.info(current_greeting)
     
     st.header("📋 Form Identitas Proyek (Fase 1)")
+    st.markdown("Silakan lengkapi 16 parameter di bawah ini untuk mengunci data pada lembar `support table` secara otomatis.")
     
-    # Membungkus form agar halaman tidak me-refresh setiap kali DC mengetik
     with st.form("form_metadata_proyek"):
         
+        # --- BLOK A ---
         st.subheader("🏢 Blok A: Informasi Proyek & Lokasi")
         col1, col2 = st.columns(2)
         with col1:
-            st.session_state.metadata["NAMA_PROYEK"] = st.text_input("Nama Proyek", value="EMR FTTH PROJECT")
-            st.session_state.metadata["NO_PO"] = st.text_input("Nomor PO")
-            st.session_state.metadata["TANGGAL_TEST"] = st.text_input("Tanggal Test")
+            st.session_state.metadata["NAMA_PROYEK"] = st.text_input(
+                "Nama Proyek", value="EMR FTTH PROJECT", 
+                placeholder="Contoh: EMR FTTH PROJECT", 
+                help="Masukkan nama proyek utama sesuai kontrak kerja spek pelanggan."
+            )
+            st.session_state.metadata["NO_PO"] = st.text_input(
+                "Nomor Purchase Order (PO)", placeholder="Contoh: PO-2026/06/EMR-01",
+                help="Nomor PO resmi sebagai validasi penagihan dokumen."
+            )
+            st.session_state.metadata["TANGGAL_TEST"] = st.text_input(
+                "Tanggal Pelaksanaan Test", placeholder="Contoh: 27 Juni 2026",
+                help="Tanggal aktual tim lapangan melakukan pengukuran OPM/OTDR."
+            )
         with col2:
-            st.session_state.metadata["REGION"] = st.text_input("Region", value="JAWA TIMUR")
-            st.session_state.metadata["ALAMAT"] = st.text_input("Alamat Lengkap", value="Pare, Jawa Timur")
+            st.session_state.metadata["REGION"] = st.text_input(
+                "Region Wilayah", value="JAWA TIMUR", 
+                placeholder="Contoh: JAWA TIMUR",
+                help="Lokasi provinsi atau cakupan area kerja proyek."
+            )
+            st.session_state.metadata["ALAMAT"] = st.text_input(
+                "Alamat Lengkap Site", value="Pare, East Java", 
+                placeholder="Contoh: Nglawak Kecamatan Kertosono, Kediri",
+                help="Alamat geografi spesifik tempat infrastruktur dipasang."
+            )
             
         st.divider()
         
-        st.subheader("📡 Blok B: Parameter Jaringan")
+        # --- BLOK B ---
+        st.subheader("📡 Blok B: Parameter Jaringan (Network Identifiers)")
         col3, col4 = st.columns(2)
         with col3:
-            st.session_state.metadata["NAMA_OLT"] = st.text_input("Nama OLT")
-            st.session_state.metadata["NAMA_LOKASI"] = st.text_input("Nama Cluster / Subfeeder")
-            st.session_state.metadata["ID_LOKASI"] = st.text_input("ID Cluster / Subfeeder")
+            st.session_state.metadata["NAMA_OLT"] = st.text_input(
+                "Nama OLT Host", placeholder="Contoh: KERTOSONO",
+                help="Identitas perangkat pusat OLT penyuplai sinyal optik."
+            )
+            st.session_state.metadata["NAMA_LOKASI"] = st.text_input(
+                "Nama Cluster / Subfeeder", placeholder="Contoh: DUSUN BOGO RW 08 FDT-2",
+                help="Nama segmen jaringan atau area cakupan cluster distribusi."
+            )
+            st.session_state.metadata["ID_LOKASI"] = st.text_input(
+                "ID Cluster / Subfeeder", placeholder="Contoh: NJK000095",
+                help="ID kode unik ekosistem lokasi cluster jaringan."
+            )
         with col4:
-            st.session_state.metadata["ID_FDT_FROM"] = st.text_input("ID FDT (Link From)")
-            st.session_state.metadata["ID_FAT_TO"] = st.text_input("ID FAT (Link To)")
+            st.session_state.metadata["ID_FDT_FROM"] = st.text_input(
+                "ID FDT (Link From)", placeholder="Contoh: NJK.100.021.DSBG08-FDT2.019.110",
+                help="Kode identitas koneksi hulu (awal penarikan kabel feeder/distribusi)."
+            )
+            st.session_state.metadata["ID_FAT_TO"] = st.text_input(
+                "ID FAT (Link To)", placeholder="Contoh: DSBG08FDT2.019",
+                help="Kode identitas kotak terminal distribusi akhir arah pelanggan."
+            )
             
         st.divider()
         
-        st.subheader("🤝 Blok C: Informasi Stakeholder")
+        # --- BLOK C ---
+        st.subheader("🤝 Blok C: Informasi Stakeholder (Customer & Vendor)")
         col5, col6 = st.columns(2)
         with col5:
-            st.session_state.metadata["NAMA_PT_VENDOR"] = st.text_input("Nama Perusahaan Vendor", value="PT Buana Menara Indonesia")
-            st.session_state.metadata["REP_VENDOR"] = st.text_input("Nama Rep. Vendor")
-            st.session_state.metadata["JABATAN_VENDOR"] = st.text_input("Jabatan Vendor", value="BMI FIELD SUPERVISOR")
+            st.session_state.metadata["NAMA_PT_VENDOR"] = st.text_input(
+                "Nama Perusahaan Vendor", value="PT Buana Menara Indonesia", 
+                placeholder="Contoh: PT Buana Menara Indonesia",
+                help="Nama resmi perusahaan pelaksana pembangunan infrastruktur."
+            )
+            st.session_state.metadata["REP_VENDOR"] = st.text_input(
+                "Nama Representatif Vendor", placeholder="Contoh: VIFIN ARI P.",
+                help="Nama lengkap penanggung jawab dari vendor untuk tanda tangan dokumen."
+            )
+            st.session_state.metadata["JABATAN_VENDOR"] = st.text_input(
+                "Jabatan Pelaksana Vendor", value="BMI FIELD SUPERVISOR", 
+                placeholder="Contoh: BMI FIELD SUPERVISOR",
+                help="Posisi struktural dari penanggung jawab pihak mitra/vendor."
+            )
         with col6:
-            st.session_state.metadata["NAMA_PT_CUSTOMER"] = st.text_input("Nama Perusahaan Customer", value="PT Ekamas Mora Republik Tbk")
-            st.session_state.metadata["REP_CUSTOMER"] = st.text_input("Nama Rep. Customer", value="Suparmanto")
-            st.session_state.metadata["JABATAN_CUSTOMER"] = st.text_input("Jabatan Customer", value="EMR FIELD SUPERVISOR")
+            st.session_state.metadata["NAMA_PT_CUSTOMER"] = st.text_input(
+                "Nama Perusahaan Customer", value="PT Ekamas Mora Republik Tbk", 
+                placeholder="Contoh: PT Ekamas Mora Republik Tbk",
+                help="Nama perusahaan pemilik jaringan/pemilik proyek utama."
+            )
+            st.session_state.metadata["REP_CUSTOMER"] = st.text_input(
+                "Nama Representatif Customer", value="Suparmanto", 
+                placeholder="Contoh: SUPARMANTO",
+                help="Nama pengawas atau direksi resmi dari pihak customer."
+            )
+            st.session_state.metadata["JABATAN_CUSTOMER"] = st.text_input(
+                "Jabatan Pengawas Customer", value="EMR FIELD SUPERVISOR", 
+                placeholder="Contoh: EMR FIELD SUPERVISOR",
+                help="Posisi struktural dari penanggung jawab pihak customer."
+            )
             
-        # Tombol Eksekusi
-        submit_metadata = st.form_submit_button("Simpan Data Proyek")
+        submit_metadata = st.form_submit_button("🔒 Simpan Data Proyek")
         
     if submit_metadata:
-        st.success("Data Proyek berhasil diamankan ke dalam memori sistem murni!")
+        st.success("✅ Data Proyek berhasil diamankan ke dalam memori sistem murni!")
+
+    # =============================================================================
+    # SEKTOR 2 - SMART INPUT SEKUENSIAL VERTIKAL WITH GUIDE EXAMPLES
+    # =============================================================================
+    st.divider()
+    st.header("⚙️ Sektor 2: Smart Input (FAT & Tiang)")
+    st.info("Gunakan tombol 'Tambah Baris' di bawah masing-masing kategori untuk menambahkan input sekuensial secara bertingkat.")
+    
+    # --- JALUR FAT ---
+    st.subheader("A. Pembangun Jalur FAT (Line Distribution)")
+    st.markdown("> 💡 **Panduan & Contoh:** Masukkan kode huruf jalur diikuti total unit. Teks `A10` akan diterjemahkan sistem menjadi urutan **FAT A01 sampai FAT A10** secara murni.")
+    
+    for i in range(len(st.session_state.fat_commands)):
+        st.session_state.fat_commands[i] = st.text_input(
+            f"Perintah FAT Jalur ke-{i+1}", 
+            value=st.session_state.fat_commands[i], 
+            placeholder="Misal: A10 atau B08",
+            key=f"fat_input_{i}"
+        )
+        
+    if st.button("➕ Tambah Jalur FAT"):
+        st.session_state.fat_commands.append("")
+        st.rerun()
+
+    st.write("") 
+    st.divider()
+
+    # --- JALUR TIANG ---
+    st.subheader("B. Pembangun Tiang (Pole Erection)")
+    st.markdown("> 💡 **Panduan & Contoh:** Gunakan awalan kata kunci yang ketat. \n> * `Pole 74 = 10` $\rightarrow$ Memicu lembar **Pole Erection 74** (10 baris data NEW POLE).\n> * `Ext 74 = 12` $\rightarrow$ Memicu lembar **Pole Erection Ext 74** (12 baris data EXT POLE).")
+    
+    for i in range(len(st.session_state.pole_commands)):
+        st.session_state.pole_commands[i] = st.text_input(
+            f"Perintah Volume Tiang ke-{i+1}", 
+            value=st.session_state.pole_commands[i], 
+            placeholder="Misal: Pole 72.5 = 35 atau Ext 74 = 28",
+            key=f"pole_input_{i}"
+        )
+
+    if st.button("➕ Tambah Rute Tiang"):
+        st.session_state.pole_commands.append("")
+        st.rerun()
+
+    st.divider()
+
+    # --- PENGUNCI DATA AKHIR ---
+    if st.button("💾 Simpan & Validasi Draf Fase 1"):
+        fat_bersih = [cmd for cmd in st.session_state.fat_commands if cmd.strip() != ""]
+        pole_bersih = [cmd for cmd in st.session_state.pole_commands if cmd.strip() != ""]
+        
+        st.session_state.fat_commands = fat_bersih if fat_bersih else [""]
+        st.session_state.pole_commands = pole_bersih if pole_bersih else [""]
+        
+        st.success("✅ Seluruh perintah struktur Fase 1 berhasil divalidasi dan dikunci dalam sistem.")
+        st.write("**Daftar Jalur FAT Terdaftar:**", fat_bersih)
+        st.write("**Daftar Distribusi Tiang Terdaftar:**", pole_bersih)
 
 # =============================================================================
-# 7. SUNTIKAN KOMPONEN FOOTER STATIS (STRICT LAYOUT)
+# 7. SUNTIKAN KOMPONEN FOOTER STATIS (HIGH VISIBILITY FOR PC & MOBILE)
 # =============================================================================
-st.markdown("""
-    <style>
-    .permanent-footer {
-        position: fixed;
-        left: 0;
-        bottom: 0;
-        width: 100%;
-        background-color: transparent;
-        color: #6B7280;
-        text-align: center;
-        padding: 10px 0;
-        font-size: 13px;
-        font-weight: 500;
-        z-index: 999;
-        pointer-events: none;
-    }
-    </style>
-    <div class="permanent-footer">Developed by An_</div>
-""", unsafe_allow_html=True)
+st.markdown('<div class="permanent-footer">Developed by An_</div>', unsafe_allow_html=True)
