@@ -4,14 +4,11 @@ import random
 import os
 import io
 import json
+import traceback
 import pandas as pd
 
-from parser_engine import parse_all_fat, parse_all_poles
 from excel_injector import inject_excel_fase1
 
-# =============================================================================
-# KONFIGURASI SISTEM
-# =============================================================================
 TEMPLATE_PATH = "Template.xlsx"
 DB_DIR = "history_database"
 os.makedirs(DB_DIR, exist_ok=True)
@@ -48,17 +45,64 @@ if "initialized" not in st.session_state:
     st.session_state.fat_commands = [""]
     st.session_state.pole_commands = [""]
     
+    # KITA KEMBALIKAN KOLOM KE NAMA AMAN "Ukuran" AGAR JSON LAMA TIDAK CRASH
     st.session_state.df_fat_editor = pd.DataFrame(columns=["Jalur FAT"])
     st.session_state.df_pole_editor = pd.DataFrame(columns=["Tipe Tiang", "Ukuran", "Jumlah"])
+
+def parse_fat_inline(commands):
+    res = []
+    for cmd in commands:
+        cmd = cmd.strip()
+        if not cmd: continue
+        import re
+        match = re.match(r"([A-Za-z]+)(\d+)", cmd)
+        if match:
+            line = match.group(1).upper()
+            count = int(match.group(2))
+            for i in range(1, count + 1):
+                res.append(f"{line}{i:02d}")
+        else:
+            res.append(cmd)
+    return res
+
+def parse_pole_inline(commands):
+    res = []
+    for cmd in commands:
+        cmd = cmd.strip()
+        if not cmd or "=" not in cmd: continue
+        left, right = cmd.split("=", 1)
+        left = left.strip()
+        
+        try: qty = int(right.strip())
+        except: qty = 0
+        
+        lower_left = left.lower()
+        if lower_left.startswith("pole "):
+            val = left[5:].strip() 
+            sheet_title = f"Pole Erection {val}"
+            p_type = "NEW POLE"
+        else:
+            sheet_title = f"Pole Erection {left}"
+            p_type = "EXT POLE" if lower_left.startswith("ext") else "NEW POLE"
+            
+        # Kita masukan title ke kolom "Ukuran" agar kompatibel
+        res.append({"title": sheet_title, "type": p_type, "qty": qty})
+    return res
 
 def generate_dc_greeting(nama, suffix):
     now = datetime.datetime.now()
     hour = now.hour
-    panggilan = f"{nama} {suffix}".strip() if suffix else nama
-    if 0 <= hour < 11: return f"Selamat Pagi, {panggilan}! Mari fokus selesaikan Fase 1."
-    elif 11 <= hour < 15: return f"Selamat Siang, {panggilan}! Tetap teliti pada struktur data."
-    elif 15 <= hour < 19: return f"Selamat Sore, {panggilan}! Fase 1 hampir matang."
-    else: return f"Selamat Malam, {panggilan}! Sistem siap merakit dokumen Anda."
+    p = f"{nama} {suffix}".strip() if suffix else nama
+    
+    pagi = [f"Selamat Pagi, {p}! Folder baru siap diisi.", f"Halo {p}! Semangat pagi merakit dokumen.", f"Pagi yang cerah, {p}! Teliti rutenya ya."]
+    siang = [f"Selamat Siang, {p}! Fokus pada eksekusi Draf.", f"Halo {p}! Jangan lupa peregangan, biarkan mesin bekerja.", f"Siang {p}! Mari kita bersihkan sheet tak perlu."]
+    sore = [f"Selamat Sore, {p}! Sedikit lagi dokumen siap.", f"Sore yang solid, {p}! Satu klik menuju file matang.", f"Waktunya wrap-up hari ini, {p}!"]
+    malam = [f"Selamat Malam, {p}! Sistem siap temani lemburmu.", f"Malam {p}! Cek ulang matriks sebelum unduh.", f"Halo shift malam {p}! Mesin siap membedah Draf."]
+    
+    if 0 <= hour < 11: return random.choice(pagi)
+    elif 11 <= hour < 15: return random.choice(siang)
+    elif 15 <= hour < 19: return random.choice(sore)
+    else: return random.choice(malam)
 
 if st.session_state.current_theme == "dark":
     st.markdown("""<style>.stApp { background-color: #0E1117; color: #FFFFFF; } .stButton>button { border: 1px solid #10B981; } .permanent-footer { position: fixed; left: 0; bottom: 0; width: 100%; background-color: #0F172A; color: #10B981; text-align: center; padding: 12px 0; z-index: 999; }</style>""", unsafe_allow_html=True)
@@ -73,9 +117,6 @@ with st.sidebar:
     st.session_state.current_role = "dc" if "DC" in role_choice else "admin"
     st.session_state.current_theme = "light" if st.toggle("Aktifkan Mode Terang", value=(st.session_state.current_theme == "light")) else "dark"
 
-# =============================================================================
-# UI UTAMA
-# =============================================================================
 if st.session_state.current_role == "admin":
     st.header("🛠️ Panel Kendali Administrator")
     st.divider()
@@ -105,10 +146,7 @@ else:
         st.error(f"⚠️ KRITIS: File {TEMPLATE_PATH} tidak ditemukan di root server GitHub!")
         st.stop()
 
-    tab1, tab2 = st.tabs([
-        "📋 FASE 1: Struktur Identitas & Eksekusi Draf", 
-        "🗄️ PUSAT ARSIP DIGITAL"
-    ])
+    tab1, tab2 = st.tabs(["📋 FASE 1: Struktur Identitas & Eksekusi Draf", "🗄️ PUSAT ARSIP DIGITAL"])
 
     with tab1:
         st.header("1. Form Identitas Proyek")
@@ -147,7 +185,7 @@ else:
         with col_sect2:
             st.subheader("B. Pembangun Tiang")
             for i in range(len(st.session_state.pole_commands)):
-                st.session_state.pole_commands[i] = st.text_input(f"Baris Tiang-{i+1} (Cth: Pole 74 = 10)", value=st.session_state.pole_commands[i], key=f"pole_cmd_{i}")
+                st.session_state.pole_commands[i] = st.text_input(f"Baris Tiang-{i+1} (Cth: pole 74 = 10)", value=st.session_state.pole_commands[i], key=f"pole_cmd_{i}")
             if st.button("➕ Tambah Baris Tiang"):
                 st.session_state.pole_commands.append("")
                 st.rerun()
@@ -156,32 +194,54 @@ else:
             fat_bersih = [cmd for cmd in st.session_state.fat_commands if cmd.strip() != ""]
             pole_bersih = [cmd for cmd in st.session_state.pole_commands if cmd.strip() != ""]
             
-            st.session_state.df_fat_editor = pd.DataFrame({"Jalur FAT": parse_all_fat(fat_bersih)})
-            st.session_state.df_pole_editor = pd.DataFrame([[p["type"], p["size"], p["qty"]] for p in parse_all_poles(pole_bersih)], columns=["Tipe Tiang", "Ukuran", "Jumlah"])
+            st.session_state.df_fat_editor = pd.DataFrame({"Jalur FAT": parse_fat_inline(fat_bersih)})
+            
+            p_list = parse_pole_inline(pole_bersih)
+            # Kolom diubah aman menjadi "Ukuran"
+            st.session_state.df_pole_editor = pd.DataFrame([[p["type"], p["title"], p["qty"]] for p in p_list], columns=["Tipe Tiang", "Ukuran", "Jumlah"])
             st.session_state.fase1_extracted = True
 
         if st.session_state.get("fase1_extracted", False):
+            st.markdown("### ✏️ Editor & Validasi Data Fase 1")
+            col_ed1, col_ed2 = st.columns(2)
+            with col_ed1:
+                st.write("**Tabel Jalur FAT:**")
+                st.session_state.df_fat_editor = st.data_editor(st.session_state.df_fat_editor, num_rows="dynamic", use_container_width=True)
+            with col_ed2:
+                st.write("**Tabel Distribusi Tiang:**")
+                st.session_state.df_pole_editor = st.data_editor(st.session_state.df_pole_editor, num_rows="dynamic", use_container_width=True)
+
             st.divider()
             st.subheader("📥 Generator Excel Draf Fase 1")
-            if st.button("💾 LIVE SINKRONISASI FILE DRAF FASE 1"):
+            
+            if st.button("💾 LIVE SINKRONISASI FILE DRAF"):
                 try:
                     with open(TEMPLATE_PATH, "rb") as f: raw_bytes = f.read()
                     
                     final_fats = st.session_state.df_fat_editor["Jalur FAT"].tolist()
-                    final_poles = [{"type": r["Tipe Tiang"], "size": r["Ukuran"], "qty": int(r["Jumlah"])} for _, r in st.session_state.df_pole_editor.iterrows()]
+                    
+                    # LOGIKA AMAN: Menerima "Ukuran" maupun "Nama Sheet Target"
+                    final_poles = []
+                    for _, r in st.session_state.df_pole_editor.iterrows():
+                        get_title = r.get("Nama Sheet Target", r.get("Ukuran", ""))
+                        final_poles.append({"type": r["Tipe Tiang"], "title": str(get_title), "qty": int(r["Jumlah"])})
+                        
                     actual_meta = {key: (val.strip() if val.strip() else DEFAULT_METADATA[key]) for key, val in st.session_state.metadata.items()}
                     
-                    with st.spinner("Memisahkan sheet Cluster & Subfeeder..."):
+                    with st.spinner("Memproses struktur Cluster..."):
                         c_out = inject_excel_fase1(io.BytesIO(raw_bytes), actual_meta, final_fats, final_poles, mode="cluster")
-                        s_out = inject_excel_fase1(io.BytesIO(raw_bytes), actual_meta, final_fats, final_poles, mode="subfeeder")
-                        
                         st.session_state.dl_fase1_c = c_out.getvalue()
+                        
+                    with st.spinner("Memproses struktur Subfeeder..."):
+                        s_out = inject_excel_fase1(io.BytesIO(raw_bytes), actual_meta, final_fats, final_poles, mode="subfeeder")
                         st.session_state.dl_fase1_s = s_out.getvalue()
-                        st.session_state.sfx_name = actual_meta["NAMA_LOKASI"] or "BARU"
-                        st.session_state.fase1_ready = True
-                    st.success("File Draf Fase 1 berhasil dirakit!")
+                        
+                    st.session_state.sfx_name = actual_meta["NAMA_LOKASI"] or "BARU"
+                    st.session_state.fase1_ready = True
+                    st.success("File Draf Fase 1 berhasil dirakit secara berurutan!")
                 except Exception as e:
-                    st.error(f"Gagal memproses file: {str(e)}")
+                    error_detail = traceback.format_exc()
+                    st.error(f"Gagal memproses file. Detail Error:\n\n{error_detail}")
 
             if st.session_state.get("fase1_ready", False):
                 col_dl1, col_dl2 = st.columns(2)
@@ -220,7 +280,9 @@ else:
                             st.session_state.metadata = loaded["metadata"]
                             st.session_state.fat_commands = loaded["fat_commands"]
                             st.session_state.pole_commands = loaded["pole_commands"]
-                            st.session_state.fase1_extracted = False 
+                            st.session_state.df_fat_editor = pd.DataFrame(loaded["table_fat"])
+                            st.session_state.df_pole_editor = pd.DataFrame(loaded["table_pole"])
+                            st.session_state.fase1_extracted = True 
                             st.rerun()
 
 st.markdown('<div class="permanent-footer">Developed by An_</div>', unsafe_allow_html=True)
