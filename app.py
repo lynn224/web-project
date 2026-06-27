@@ -164,20 +164,61 @@ with st.sidebar:
 # =============================================================================
 # 6. PEMBAGIAN BLOK RUANG KERJA (BERDASARKAN ROLE)
 # =============================================================================
-# Sapaan Khusus Hanya Muncul di Area DC
 st.title("⚡ Universal ATP Document Generator")
-if st.session_state.current_role == "dc":
-    current_greeting = generate_dc_greeting(st.session_state.user_name, st.session_state.user_suffix)
-    st.info(current_greeting)
-st.divider()
 
-# Penampung Konten Utama Berdasarkan Role
 if st.session_state.current_role == "admin":
     st.header("🛠️ Panel Kendali Administrator")
-    st.write("Halaman konfigurasi threshold splitting template dan batas kapasitas sel akan diletakkan di modul ini pada tahap selanjutnya.")
+    st.info("Halaman konfigurasi threshold splitting template dan batas kapasitas sel akan diletakkan di modul ini pada tahap selanjutnya.")
 else:
-    st.header("📋 Ruang Operasional Document Control (DC)")
-    st.write("Wadah Form 16 Variabel Support Table dan Smart Input Sekuensial Vertikal akan dipasang di sini pada langkah berikutnya.")
+    # --- TAMPILAN KHUSUS DOCUMENT CONTROL (DC) ---
+    current_greeting = generate_dc_greeting(st.session_state.user_name, st.session_state.user_suffix)
+    st.info(current_greeting)
+    
+    st.header("📋 Form Identitas Proyek (Fase 1)")
+    
+    # Membungkus form agar halaman tidak me-refresh setiap kali DC mengetik
+    with st.form("form_metadata_proyek"):
+        
+        st.subheader("🏢 Blok A: Informasi Proyek & Lokasi")
+        col1, col2 = st.columns(2)
+        with col1:
+            st.session_state.metadata["NAMA_PROYEK"] = st.text_input("Nama Proyek", value="EMR FTTH PROJECT")
+            st.session_state.metadata["NO_PO"] = st.text_input("Nomor PO")
+            st.session_state.metadata["TANGGAL_TEST"] = st.text_input("Tanggal Test")
+        with col2:
+            st.session_state.metadata["REGION"] = st.text_input("Region", value="JAWA TIMUR")
+            st.session_state.metadata["ALAMAT"] = st.text_input("Alamat Lengkap", value="Pare, Jawa Timur")
+            
+        st.divider()
+        
+        st.subheader("📡 Blok B: Parameter Jaringan")
+        col3, col4 = st.columns(2)
+        with col3:
+            st.session_state.metadata["NAMA_OLT"] = st.text_input("Nama OLT")
+            st.session_state.metadata["NAMA_LOKASI"] = st.text_input("Nama Cluster / Subfeeder")
+            st.session_state.metadata["ID_LOKASI"] = st.text_input("ID Cluster / Subfeeder")
+        with col4:
+            st.session_state.metadata["ID_FDT_FROM"] = st.text_input("ID FDT (Link From)")
+            st.session_state.metadata["ID_FAT_TO"] = st.text_input("ID FAT (Link To)")
+            
+        st.divider()
+        
+        st.subheader("🤝 Blok C: Informasi Stakeholder")
+        col5, col6 = st.columns(2)
+        with col5:
+            st.session_state.metadata["NAMA_PT_VENDOR"] = st.text_input("Nama Perusahaan Vendor", value="PT Buana Menara Indonesia")
+            st.session_state.metadata["REP_VENDOR"] = st.text_input("Nama Rep. Vendor")
+            st.session_state.metadata["JABATAN_VENDOR"] = st.text_input("Jabatan Vendor", value="BMI FIELD SUPERVISOR")
+        with col6:
+            st.session_state.metadata["NAMA_PT_CUSTOMER"] = st.text_input("Nama Perusahaan Customer", value="PT Ekamas Mora Republik Tbk")
+            st.session_state.metadata["REP_CUSTOMER"] = st.text_input("Nama Rep. Customer", value="Suparmanto")
+            st.session_state.metadata["JABATAN_CUSTOMER"] = st.text_input("Jabatan Customer", value="EMR FIELD SUPERVISOR")
+            
+        # Tombol Eksekusi
+        submit_metadata = st.form_submit_button("Simpan Data Proyek")
+        
+    if submit_metadata:
+        st.success("Data Proyek berhasil diamankan ke dalam memori sistem murni!")
 
 # =============================================================================
 # 7. SUNTIKAN KOMPONEN FOOTER STATIS (STRICT LAYOUT)
