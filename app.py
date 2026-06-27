@@ -371,28 +371,52 @@ else:
         # Menyediakan File Uploader di layar agar DC bisa memasukkan Template Master kapan saja
         uploaded_template = st.file_uploader("Unggah Master Template Excel (Template_Cluster.xlsx)", type=["xlsx"])
         
-        if uploaded_template is not None:
+        if         if uploaded_template is not None:
             try:
-                # Memanggil Mesin Excel Injector
-                final_excel = inject_excel_fase1(
-                    uploaded_template, 
-                    st.session_state.metadata, 
-                    parsed_fat, 
-                    parsed_poles
-                )
+                st.success("✨ Template berhasil dibaca! Memproses dokumen...")
+                col_dl1, col_dl2 = st.columns(2)
                 
-                # Menampilkan Tombol Unduh Resmi Komponen Native Streamlit
-                st.download_button(
-                    label="🚀 UNDUH DRAF CLUSTER EXCEL (FASE 1)",
-                    data=final_excel,
-                    file_name=f"Draf_Cluster_{st.session_state.metadata['ID_LOKASI'] or 'BARU'}.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                )
-                st.balloons() # Efek perayaan visual sukses
+                with col_dl1:
+                    # Mengeksekusi mesin pembuat file khusus Cluster
+                    excel_cluster = inject_excel_fase1(
+                        uploaded_template, 
+                        st.session_state.metadata, 
+                        st.session_state.parsed_fat, 
+                        st.session_state.parsed_poles,
+                        mode="cluster"  # <--- Mengirim perintah mode Cluster
+                    )
+                    st.download_button(
+                        label="🚀 UNDUH DRAF CLUSTER",
+                        data=excel_cluster.getvalue(),
+                        file_name=f"DRAF_CLUSTER_{st.session_state.metadata['ID_LOKASI'] or 'BARU'}.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        use_container_width=True
+                    )
+                    
+                with col_dl2:
+                    # WAJIB: Mengembalikan posisi baca template ke awal (0) sebelum diproses ulang
+                    uploaded_template.seek(0) 
+                    
+                    # Mengeksekusi mesin pembuat file khusus Subfeeder
+                    excel_subfeeder = inject_excel_fase1(
+                        uploaded_template, 
+                        st.session_state.metadata, 
+                        st.session_state.parsed_fat, 
+                        st.session_state.parsed_poles,
+                        mode="subfeeder" # <--- Mengirim perintah mode Subfeeder
+                    )
+                    st.download_button(
+                        label="🚀 UNDUH DRAF SUBFEEDER",
+                        data=excel_subfeeder.getvalue(),
+                        file_name=f"DRAF_SUBFEEDER_{st.session_state.metadata['ID_LOKASI'] or 'BARU'}.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        use_container_width=True
+                    )
+                    
             except Exception as e:
                 st.error(f"Terjadi kegagalan pemrosesan struktur file: {str(e)}")
         else:
-            st.warning("Silakan masukkan file Master Template Excel Anda di atas untuk mengaktifkan tombol unduhan final.")
+            st.warning("Silakan masukkan file Template Master Excel Anda di atas untuk mengaktifkan tombol unduhan final.")
 
 # =============================================================================
 # 7. SUNTIKAN KOMPONEN FOOTER STATIS (HIGH VISIBILITY FOR PC & MOBILE)
