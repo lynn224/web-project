@@ -42,10 +42,10 @@ st.set_page_config(page_title="Universal ATP Generator", page_icon="⚡", layout
 # =============================================================================
 if "initialized" not in st.session_state:
     st.session_state.initialized = True
-    st.session_state.current_theme = "dark"
+    st.session_state.current_theme = "light"
     st.session_state.current_role = "dc"
-    st.session_state.user_name = "Anjas"
-    st.session_state.user_suffix = "sayang"
+    st.session_state.user_name = "An_"
+    st.session_state.user_suffix = ""
     
     st.session_state.metadata = {key: "" for key in DEFAULT_METADATA.keys()}
     st.session_state.fat_commands = [""]
