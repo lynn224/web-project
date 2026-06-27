@@ -10,11 +10,11 @@ from parser_engine import parse_all_fat, parse_all_poles
 from excel_injector import inject_excel_fase1
 
 # =============================================================================
-# 1. KONFIGURASI SISTEM & FOLDER DATABASE JSON MURNI
+# KONFIGURASI GLOBAL & KAMUS PILIHAN BAWAAN (FALLBACK METADATA)
 # =============================================================================
 TEMPLATE_PATH = "Template.xlsx"
 DB_DIR = "history_database"
-os.makedirs(DB_DIR, exist_ok=True) # Membuat folder database jika belum ada
+os.makedirs(DB_DIR, exist_ok=True)
 
 DEFAULT_METADATA = {
     "NAMA_PROYEK": "EMR FTTH PROJECT",
@@ -38,7 +38,7 @@ DEFAULT_METADATA = {
 st.set_page_config(page_title="Universal ATP Generator", page_icon="⚡", layout="wide")
 
 # =============================================================================
-# 2. INSIALISASI MANAJEMEN SESI (SESSION STATE)
+# INSIALISASI MANAGEMENT STATE (ANTI-RESET LOOP)
 # =============================================================================
 if "initialized" not in st.session_state:
     st.session_state.initialized = True
@@ -56,7 +56,7 @@ if "initialized" not in st.session_state:
     st.session_state.df_opm_editor = pd.DataFrame(columns=["Titik Ukur (FAT/Spl)", "OPM Before (dBm)", "OPM After (dBm)"])
 
 # =============================================================================
-# 3. LOGIKA SAPAAN & FUNGSIONAL DRIVEN CSS TEMA
+# LOGIKA GENERATOR GREATING & STYLE TEMA
 # =============================================================================
 def generate_dc_greeting(nama, suffix):
     now = datetime.datetime.now()
@@ -68,32 +68,33 @@ def generate_dc_greeting(nama, suffix):
     else: return f"Selamat Malam, {panggilan}! Sistem selalu siap menemani lembur Anda."
 
 if st.session_state.current_theme == "dark":
-    st.markdown("""<style>.stApp { background-color: #0E1117; color: #FFFFFF; } .stButton>button { border: 1px solid #10B981; } .permanent-footer { position: fixed; left: 0; bottom: 0; width: 100%; background-color: #0F172A; color: #10B981; text-align: center; padding: 12px 0; z-index: 999; }</style>""", unsafe_allow_html=True)
+    st.markdown("""<style>.stApp { background-color: #0E1117; color: #FFFFFF; } .stButton>button { background-color: #1F2937; color: #10B981; border: 1px solid #10B981; } .stButton>button:hover { background-color: #10B981; color: #FFFFFF; } div[data-testid="stForm"] { background-color: #1E293B; border: 1px solid #334155; border-radius: 10px; padding: 25px; } .permanent-footer { position: fixed; left: 0; bottom: 0; width: 100%; background-color: #0F172A; color: #10B981; text-align: center; padding: 12px 0; font-size: 14px; font-weight: 700; border-top: 2px solid #10B981; z-index: 999; }</style>""", unsafe_allow_html=True)
 else:
-    st.markdown("""<style>.stApp { background-color: #F9FAFB; color: #1F2937; } .stButton>button { border: 1px solid #059669; } .permanent-footer { position: fixed; left: 0; bottom: 0; width: 100%; background-color: #FFFFFF; color: #059669; text-align: center; padding: 12px 0; z-index: 999; }</style>""", unsafe_allow_html=True)
+    st.markdown("""<style>.stApp { background-color: #F9FAFB; color: #1F2937; } .stButton>button { background-color: #FFFFFF; color: #059669; border: 1px solid #059669; } .stButton>button:hover { background-color: #059669; color: #FFFFFF; } div[data-testid="stForm"] { background-color: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 10px; padding: 25px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); } .permanent-footer { position: fixed; left: 0; bottom: 0; width: 100%; background-color: #FFFFFF; color: #059669; text-align: center; padding: 12px 0; font-size: 14px; font-weight: 700; border-top: 2px solid #059669; z-index: 999; }</style>""", unsafe_allow_html=True)
 
+# SIDEBAR PANEL CONTROL
 with st.sidebar:
     st.subheader("👤 Kendali Akses & Profil")
     st.session_state.user_name = st.text_input("Nama Pengguna:", value=st.session_state.user_name)
     st.session_state.user_suffix = st.text_input("Suffix Spesial:", value=st.session_state.user_suffix)
     role_choice = st.radio("Hak Akses:", ["Document Control (DC)", "Administrator System"])
     st.session_state.current_role = "dc" if "DC" in role_choice else "admin"
-    st.session_state.current_theme = "light" if st.toggle("Aktifkan Mode Terang") else "dark"
+    theme_toggle = st.toggle("Aktifkan Mode Terang", value=(st.session_state.current_theme == "light"))
+    st.session_state.current_theme = "light" if theme_toggle else "dark"
 
-# =============================================================================
-# INTERFASE DIENGKRESI SEBAGAI ROLE
-# =============================================================================
+st.title("⚡ Universal ATP Document Generator")
+
 if st.session_state.current_role == "admin":
     st.header("🛠️ Panel Kendali Administrator")
-    st.info("Otoritas pengelolaan repository GitHub dan manajemen pembersihan database JSON murni.")
+    st.info("Otoritas pengelolaan berkas Server-Side GitHub master template.")
 else:
     st.info(generate_dc_greeting(st.session_state.user_name, st.session_state.user_suffix))
     
     if not os.path.exists(TEMPLATE_PATH):
-        st.error(f"⚠️ KRITIS: File {TEMPLATE_PATH} tidak ditemukan di root server GitHub!")
+        st.error(f"⚠️ KRITIS: Berkas master template `{TEMPLATE_PATH}` tidak ditemukan di server!")
         st.stop()
 
-    # TAMPILAN INTERAKTIF 2 FASE BERBASIS TABS UTAMA
+    # PEMBAGIAN TAB OPERASIONAL
     tab1, tab2, tab3 = st.tabs([
         "📋 FASE 1: Struktur Identitas & Fisik", 
         "🔢 FASE 2: Input Angka Parameter (OPM/OTDR)",
@@ -181,7 +182,6 @@ else:
                 st.write("**Tabel Distribusi Tiang:**")
                 st.session_state.df_pole_editor = st.data_editor(st.session_state.df_pole_editor, num_rows="dynamic", use_container_width=True)
 
-            # LIVE EXCEL GENERATOR (PERMANEN DI LAYAR)
             st.divider()
             st.subheader("📥 Generator Berkas Excel Fase 1")
             if st.button("💾 LIVE SINKRONISASI FILE EXCEL FASE 1"):
@@ -196,6 +196,7 @@ else:
                         
                     actual_metadata = {key: (val.strip() if val.strip() else DEFAULT_METADATA[key]) for key, val in st.session_state.metadata.items()}
                     
+                    # Pemrosesan ganda independen dalam RAM
                     c_out = inject_excel_fase1(io.BytesIO(raw_bytes), actual_metadata, final_fats, final_poles, mode="cluster")
                     s_out = inject_excel_fase1(io.BytesIO(raw_bytes), actual_metadata, final_fats, final_poles, mode="subfeeder")
                     
@@ -203,7 +204,7 @@ else:
                     st.session_state.dl_fase1_s = s_out.getvalue()
                     st.session_state.sfx_name = actual_metadata["NAMA_LOKASI"] or "BARU"
                     st.session_state.fase1_ready = True
-                    st.success("File Excel Fase 1 berhasil dirakit di dalam memori RAM!")
+                    st.success("File Excel Fase 1 berhasil dirakit!")
                 except Exception as e:
                     st.error(f"Gagal memproses file: {str(e)}")
 
@@ -253,7 +254,7 @@ else:
                     st.session_state.dl_fase2_s = s_out_f2.getvalue()
                     st.session_state.sfx_name = actual_metadata["NAMA_LOKASI"] or "BARU"
                     st.session_state.fase2_ready = True
-                    st.success("File Excel Final Fase 2 berhasil dirakit di dalam memori RAM!")
+                    st.success("File Excel Final Fase 2 berhasil dirakit!")
                 except Exception as e:
                     st.error(f"Gagal memproses file: {str(e)}")
 
@@ -271,14 +272,12 @@ else:
     # -----------------------------------------------------------------------------
     with tab3:
         st.header("🗄️ Pusat Database JSON Murni")
-        st.markdown("Fitur ini menyimpan keseluruhan isi form ke dalam bentuk berkas teks terstruktur mentah (JSON). Sangat hemat penyimpanan dan dapat dimuat ulang kapan saja.")
+        st.markdown("Menyimpan rekam jejak input form dalam bentuk teks terstruktur murni (.json). Sangat ringan dan efisien.")
         
-        # TOMBOL UTAMA UNTUK MENYIMPAN DATA DATA MURNI JSON
         if st.button("💾 AMANKAN INPUT SEBAGAI DATA ARSIP DIGITAL"):
             loc_name = st.session_state.metadata.get("NAMA_LOKASI", "").strip() or DEFAULT_METADATA["NAMA_LOKASI"]
             clean_filename = loc_name.replace(" ", "_").replace("-", "_")
             
-            # Merakit seluruh komponen form murni menjadi struktur kamus Python
             archive_data = {
                 "saved_at": str(datetime.datetime.now()),
                 "metadata": st.session_state.metadata,
@@ -289,10 +288,9 @@ else:
                 "table_opm": st.session_state.df_opm_editor.to_dict(orient="list")
             }
             
-            # Menulis file ke server dalam bentuk baris teks murni (bukan file Excel besar)
             with open(f"{DB_DIR}/{clean_filename}.json", "w", encoding="utf-8") as json_file:
                 json.dump(archive_data, json_file, indent=4)
-            st.success(f"✅ Sukses! Data mentah lokasi [{loc_name}] berhasil diamankan ke dalam database server.")
+            st.success(f"✅ Sukses! Data mentah lokasi [{loc_name}] berhasil di-arsip.")
 
         st.divider()
         st.subheader("📂 Daftar Riwayat Arsip Lokasi")
@@ -306,7 +304,6 @@ else:
                     with col_file:
                         st.markdown(f"📁 **Arsip Proyek:** `{file}`")
                     with col_btn_load:
-                        # MEMUAT KEMBALI DATA MURNI KE DALAM FORM WEB
                         if st.button("📥 Muat Data ke Form", key=f"load_{file}"):
                             with open(f"{DB_DIR}/{file}", "r", encoding="utf-8") as json_file:
                                 loaded = json.load(json_file)
@@ -319,9 +316,9 @@ else:
                             st.session_state.df_opm_editor = pd.DataFrame(loaded["table_opm"])
                             st.session_state.fase1_extracted = True
                             
-                            st.success(f"✅ Data arsip `{file}` berhasil ditarik kembali ke seluruh form web!")
+                            st.success(f"✅ Data arsip `{file}` berhasil ditarik!")
                             st.rerun()
         else:
-            st.info("Belum ada rekam jejak berkas digital terdeteksi di database server.")
+            st.info("Belum ada rekam jejak berkas digital terdeteksi.")
 
 st.markdown('<div class="permanent-footer">Developed by An_</div>', unsafe_allow_html=True)
