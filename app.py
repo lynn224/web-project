@@ -4,6 +4,7 @@ import random
 import os
 import io
 import json
+import re
 import traceback
 import pandas as pd
 
@@ -11,6 +12,7 @@ from excel_injector import inject_excel_fase1
 
 TEMPLATE_PATH = "Template.xlsx"
 DB_DIR = "history_database"
+GREETINGS_PATH = "greetings.txt"
 os.makedirs(DB_DIR, exist_ok=True)
 
 DEFAULT_METADATA = {
@@ -45,16 +47,14 @@ if "initialized" not in st.session_state:
     st.session_state.fat_commands = [""]
     st.session_state.pole_commands = [""]
     
-    # KITA KEMBALIKAN KOLOM KE NAMA AMAN "Ukuran" AGAR JSON LAMA TIDAK CRASH
     st.session_state.df_fat_editor = pd.DataFrame(columns=["Jalur FAT"])
-    st.session_state.df_pole_editor = pd.DataFrame(columns=["Tipe Tiang", "Ukuran", "Jumlah"])
+    st.session_state.df_pole_editor = pd.DataFrame(columns=["Tipe Tiang", "Nama Sheet Target", "Ukuran Detail", "Jumlah"])
 
 def parse_fat_inline(commands):
     res = []
     for cmd in commands:
         cmd = cmd.strip()
         if not cmd: continue
-        import re
         match = re.match(r"([A-Za-z]+)(\d+)", cmd)
         if match:
             line = match.group(1).upper()
@@ -64,6 +64,15 @@ def parse_fat_inline(commands):
         else:
             res.append(cmd)
     return res
+
+def format_pole_size_dynamic(raw_size):
+    clean_str = str(raw_size).strip().lower().replace("m", "").replace("meter", "").replace("inch", "").strip()
+    match = re.match(r'^(\d)[\.\s]*([\d\.]+)$', clean_str)
+    if match:
+        meter = match.group(1)
+        inch = match.group(2)
+        return f"{meter} METER {inch} INCH"
+    return str(raw_size).strip() 
 
 def parse_pole_inline(commands):
     res = []
@@ -79,30 +88,66 @@ def parse_pole_inline(commands):
         lower_left = left.lower()
         if lower_left.startswith("pole "):
             val = left[5:].strip() 
+            size_clean = format_pole_size_dynamic(val) 
+            sheet_title = f"Pole Erection {val}"       # Imbuhan kode langsung (Cth: Pole Erection 73)
+            p_type = "NEW POLE"
+        elif lower_left.startswith("ext "):
+            val = left[4:].strip()
+            size_clean = format_pole_size_dynamic(val) 
+            sheet_title = f"Pole Erection EXT {val}"   # Imbuhan kode langsung (Cth: Pole Erection EXT 74)
+            p_type = "EXT POLE"
+        else:
+            val = left
+            size_clean = format_pole_size_dynamic(val) 
             sheet_title = f"Pole Erection {val}"
             p_type = "NEW POLE"
-        else:
-            sheet_title = f"Pole Erection {left}"
-            p_type = "EXT POLE" if lower_left.startswith("ext") else "NEW POLE"
             
-        # Kita masukan title ke kolom "Ukuran" agar kompatibel
-        res.append({"title": sheet_title, "type": p_type, "qty": qty})
+        res.append({
+            "title": sheet_title, 
+            "type": p_type, 
+            "size_clean": size_clean, 
+            "qty": qty
+        })
     return res
+
+def load_greetings_from_file():
+    db = {"MINGGU": [], "PAGI": [], "SIANG": [], "SORE": [], "MALAM": []}
+    if not os.path.exists(GREETINGS_PATH): return db
+    
+    current_section = None
+    with open(GREETINGS_PATH, "r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line: continue
+            if line.startswith("[") and line.endswith("]"):
+                current_section = line[1:-1].upper()
+            elif current_section in db:
+                db[current_section].append(line)
+    return db
 
 def generate_dc_greeting(nama, suffix):
     now = datetime.datetime.now()
     hour = now.hour
-    p = f"{nama} {suffix}".strip() if suffix else nama
+    hari = now.strftime("%A")
+    panggilan = f"{nama} {suffix}".strip() if suffix else nama
     
-    pagi = [f"Selamat Pagi, {p}! Folder baru siap diisi.", f"Halo {p}! Semangat pagi merakit dokumen.", f"Pagi yang cerah, {p}! Teliti rutenya ya."]
-    siang = [f"Selamat Siang, {p}! Fokus pada eksekusi Draf.", f"Halo {p}! Jangan lupa peregangan, biarkan mesin bekerja.", f"Siang {p}! Mari kita bersihkan sheet tak perlu."]
-    sore = [f"Selamat Sore, {p}! Sedikit lagi dokumen siap.", f"Sore yang solid, {p}! Satu klik menuju file matang.", f"Waktunya wrap-up hari ini, {p}!"]
-    malam = [f"Selamat Malam, {p}! Sistem siap temani lemburmu.", f"Malam {p}! Cek ulang matriks sebelum unduh.", f"Halo shift malam {p}! Mesin siap membedah Draf."]
+    db = load_greetings_from_file()
+    fallback = f"Halo {panggilan}! Selamat datang kembali di Universal ATP Generator."
     
-    if 0 <= hour < 11: return random.choice(pagi)
-    elif 11 <= hour < 15: return random.choice(siang)
-    elif 15 <= hour < 19: return random.choice(sore)
-    else: return random.choice(malam)
+    if hari == "Sunday" and db.get("MINGGU"):
+        terpilih = random.choice(db["MINGGU"])
+    elif 0 <= hour < 11 and db.get("PAGI"):
+        terpilih = random.choice(db["PAGI"])
+    elif 11 <= hour < 15 and db.get("SIANG"):
+        terpilih = random.choice(db["SIANG"])
+    elif 15 <= hour < 19 and db.get("SORE"):
+        terpilih = random.choice(db["SORE"])
+    elif db.get("MALAM"):
+        terpilih = random.choice(db["MALAM"])
+    else:
+        terpilih = fallback
+        
+    return terpilih.format(nama_lengkap=panggilan)
 
 if st.session_state.current_theme == "dark":
     st.markdown("""<style>.stApp { background-color: #0E1117; color: #FFFFFF; } .stButton>button { border: 1px solid #10B981; } .permanent-footer { position: fixed; left: 0; bottom: 0; width: 100%; background-color: #0F172A; color: #10B981; text-align: center; padding: 12px 0; z-index: 999; }</style>""", unsafe_allow_html=True)
@@ -121,7 +166,6 @@ if st.session_state.current_role == "admin":
     st.header("🛠️ Panel Kendali Administrator")
     st.divider()
     st.subheader("🗑️ Manajemen Penghapusan Arsip Digital")
-    
     if os.path.exists(DB_DIR):
         files = [f for f in os.listdir(DB_DIR) if f.endswith(".json")]
         if files:
@@ -135,15 +179,12 @@ if st.session_state.current_role == "admin":
                             os.remove(f"{DB_DIR}/{file}")
                             st.rerun()
         else:
-            st.info("Database server dalam keadaan bersih.")
-    else:
-        st.info("Folder database belum terbentuk.")
+            st.info("Database server bersih.")
 
 else:
     st.info(generate_dc_greeting(st.session_state.user_name, st.session_state.user_suffix))
-    
     if not os.path.exists(TEMPLATE_PATH):
-        st.error(f"⚠️ KRITIS: File {TEMPLATE_PATH} tidak ditemukan di root server GitHub!")
+        st.error(f"⚠️ KRITIS: File {TEMPLATE_PATH} tidak ditemukan!")
         st.stop()
 
     tab1, tab2 = st.tabs(["📋 FASE 1: Struktur Identitas & Eksekusi Draf", "🗄️ PUSAT ARSIP DIGITAL"])
@@ -185,7 +226,7 @@ else:
         with col_sect2:
             st.subheader("B. Pembangun Tiang")
             for i in range(len(st.session_state.pole_commands)):
-                st.session_state.pole_commands[i] = st.text_input(f"Baris Tiang-{i+1} (Cth: pole 74 = 10)", value=st.session_state.pole_commands[i], key=f"pole_cmd_{i}")
+                st.session_state.pole_commands[i] = st.text_input(f"Baris Tiang-{i+1} (Cth: pole 73 = 10, ext 74 = 5)", value=st.session_state.pole_commands[i], key=f"pole_cmd_{i}")
             if st.button("➕ Tambah Baris Tiang"):
                 st.session_state.pole_commands.append("")
                 st.rerun()
@@ -197,8 +238,7 @@ else:
             st.session_state.df_fat_editor = pd.DataFrame({"Jalur FAT": parse_fat_inline(fat_bersih)})
             
             p_list = parse_pole_inline(pole_bersih)
-            # Kolom diubah aman menjadi "Ukuran"
-            st.session_state.df_pole_editor = pd.DataFrame([[p["type"], p["title"], p["qty"]] for p in p_list], columns=["Tipe Tiang", "Ukuran", "Jumlah"])
+            st.session_state.df_pole_editor = pd.DataFrame([[p["type"], p["title"], p["size_clean"], p["qty"]] for p in p_list], columns=["Tipe Tiang", "Nama Sheet Target", "Ukuran Detail", "Jumlah"])
             st.session_state.fase1_extracted = True
 
         if st.session_state.get("fase1_extracted", False):
@@ -213,18 +253,14 @@ else:
 
             st.divider()
             st.subheader("📥 Generator Excel Draf Fase 1")
-            
             if st.button("💾 LIVE SINKRONISASI FILE DRAF"):
                 try:
                     with open(TEMPLATE_PATH, "rb") as f: raw_bytes = f.read()
                     
                     final_fats = st.session_state.df_fat_editor["Jalur FAT"].tolist()
-                    
-                    # LOGIKA AMAN: Menerima "Ukuran" maupun "Nama Sheet Target"
                     final_poles = []
                     for _, r in st.session_state.df_pole_editor.iterrows():
-                        get_title = r.get("Nama Sheet Target", r.get("Ukuran", ""))
-                        final_poles.append({"type": r["Tipe Tiang"], "title": str(get_title), "qty": int(r["Jumlah"])})
+                        final_poles.append({"type": r["Tipe Tiang"], "title": r["Nama Sheet Target"], "size_clean": r["Ukuran Detail"], "qty": int(r["Jumlah"])})
                         
                     actual_meta = {key: (val.strip() if val.strip() else DEFAULT_METADATA[key]) for key, val in st.session_state.metadata.items()}
                     
