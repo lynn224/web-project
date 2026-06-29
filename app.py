@@ -89,12 +89,12 @@ def parse_pole_inline(commands):
         if lower_left.startswith("pole "):
             val = left[5:].strip() 
             size_clean = format_pole_size_dynamic(val) 
-            sheet_title = f"Pole Erection {val}"       # Imbuhan kode langsung (Cth: Pole Erection 73)
+            sheet_title = f"Pole Erection {val}"
             p_type = "NEW POLE"
         elif lower_left.startswith("ext "):
             val = left[4:].strip()
             size_clean = format_pole_size_dynamic(val) 
-            sheet_title = f"Pole Erection EXT {val}"   # Imbuhan kode langsung (Cth: Pole Erection EXT 74)
+            sheet_title = f"Pole Erection EXT {val}"
             p_type = "EXT POLE"
         else:
             val = left
