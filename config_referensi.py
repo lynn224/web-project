@@ -2,7 +2,7 @@ BLACKLIST_CLUSTER = [
     "opm subfeeder", 
     "otdr summary 1550", 
     "otdr summary 1310",
-    "opm_00" 
+    "opm_0" 
 ]
 
 BLACKLIST_SUBFEEDER = [
@@ -11,7 +11,6 @@ BLACKLIST_SUBFEEDER = [
     "opm feeder", 
     "ba splitter fat",
     "ba splitter fdt",
-    "ba spitter fat",
     "bast key"
 ]
 
