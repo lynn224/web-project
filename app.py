@@ -1,6 +1,3 @@
-import sys
-# Memaksa Python menganggap pyarrow tidak terinstal
-sys.modules['pyarrow'] = None
 import streamlit as st
 import datetime
 import random
